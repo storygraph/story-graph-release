@@ -3,15 +3,16 @@
 import subprocess
 import os
 import argparse
+import pathlib
 
 YTT_CONFIG = "YTT_CONFIG"
 
-def deploy(name):
-    config = generateConfig()
-    deployApp(name, config)
+def deploy(name, kubeConfig):
+    appConfig = generate_config()
+    deploy_app(name, appConfig, kubeConfig)
 
 
-def generateConfig():
+def generate_config():
     yttConfig = os.getenv(YTT_CONFIG)
 
     if len(yttConfig) == 0:
@@ -22,8 +23,8 @@ def generateConfig():
     return ytt.stdout
 
 
-def deployApp(name, config):
-    kapp = subprocess.Popen(['kapp', 'deploy', '-a', name, '-f-', '--yes'], stdin=config)
+def deploy_app(name, appConfig, kubeConfig):
+    kapp = subprocess.Popen(['kapp', 'deploy', '-a', name, '-f-', '--yes', '--kubeconfig', kubeConfig], stdin=appConfig)
 
     kapp.wait()
 
@@ -34,11 +35,13 @@ def main():
     optionalNamed = parser.add_argument_group("Optional named arguments")
     optionalNamed.add_argument("-a", help="Application name", default="storygraph")
 
+    defaultKubeconfig = str(pathlib.Path.home()) + "/.kube/config"
+    optionalNamed.add_argument("-k", help="Kubeconfig file path. Defaults to ~/.kube/config.", default=defaultKubeconfig)
+
     args = parser.parse_args()
-    
 
     try:
-        deploy(args.a)
+        deploy(args.a, args.k)
     except Exception as e:
         print(e)
 
